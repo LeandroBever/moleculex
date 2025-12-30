@@ -1,9 +1,9 @@
-
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Molecule, ScentNote, OlfactiveFamilyProfile, OlfactiveFamily, MoleculeResource } from '../types';
 import ScentDNARadarChart from './charts/ScentDNARadarChart';
 import EvaporationCurveLineChart from './charts/EvaporationCurveLineChart';
-import { MOCK_MOLECULE_RESOURCES, CATEGORY_HEX_COLORS } from '../constants';
+import { CATEGORY_HEX_COLORS } from '../constants';
+import { supabase } from '../lib/supabase';
 
 interface MoleculeDetailProps {
     molecule: Molecule;
@@ -41,7 +41,7 @@ const MetricBar: React.FC<{ value: number; max: number }> = React.memo(({ value,
     );
 });
 
-const InfoCard: React.FC<{title: string; children: React.ReactNode; onEdit?: () => void; className?: string}> = React.memo(({ title, children, onEdit, className = "" }) => (
+const InfoCard: React.FC<{ title: string; children: React.ReactNode; onEdit?: () => void; className?: string }> = React.memo(({ title, children, onEdit, className = "" }) => (
     <div className={`bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-gray-800 rounded-lg p-4 flex flex-col shadow-sm dark:shadow-none ${className}`}>
         <div className="flex justify-between items-center mb-3 flex-shrink-0">
             <h3 className="text-xs font-bold text-[#a89984] uppercase tracking-wider">{title}</h3>
@@ -59,15 +59,15 @@ const KnowledgeResourceCard: React.FC<{ resource: MoleculeResource; onDelete: (i
     const isPdf = resource.type === 'pdf';
     const isLink = resource.type === 'link';
     const isImage = resource.type === 'image';
-    
+
     return (
         <div className="flex items-center justify-between p-4 bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg hover:border-[#a89984]/50 transition-colors group w-full shadow-sm dark:shadow-none">
             <div className="flex items-center space-x-4 overflow-hidden">
                 <div className={`p-3 rounded-full flex-shrink-0 ${isPdf ? 'bg-red-100 text-red-500 dark:bg-red-900/20 dark:text-red-400' : isLink ? 'bg-blue-100 text-blue-500 dark:bg-blue-900/20 dark:text-blue-400' : isImage ? 'bg-purple-100 text-purple-500 dark:bg-purple-900/20 dark:text-purple-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-                    {isPdf ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> 
-                    : isLink ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg> 
-                    : isImage ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    : <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                    {isPdf ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        : isLink ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                            : isImage ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                : <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                 </div>
                 <div className="min-w-0">
                     <h4 className="text-base font-semibold text-gray-900 dark:text-gray-200 truncate">{resource.title}</h4>
@@ -81,10 +81,10 @@ const KnowledgeResourceCard: React.FC<{ resource: MoleculeResource; onDelete: (i
                 </div>
             </div>
             <div className="flex space-x-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <a 
-                    href={resource.url} 
-                    target="_blank" 
-                    rel="noreferrer" 
+                <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noreferrer"
                     className="text-sm text-[#a89984] hover:text-gray-900 dark:hover:text-white font-medium px-3 py-1 rounded-md hover:bg-[#a89984]/20 transition-colors"
                     onClick={(e) => !resource.url && e.preventDefault()}
                 >
@@ -101,8 +101,33 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
     const [newNoteText, setNewNoteText] = useState('');
     const [editingNote, setEditingNote] = useState<{ id: string; text: string } | null>(null);
     const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-    const [resources, setResources] = useState<MoleculeResource[]>(() => MOCK_MOLECULE_RESOURCES ? MOCK_MOLECULE_RESOURCES.filter(r => r.moleculeId === molecule.id) : []);
-    
+    const [resources, setResources] = useState<MoleculeResource[]>([]);
+
+    useEffect(() => {
+        const fetchResources = async () => {
+            const { data, error } = await supabase
+                .from('molecule_resources')
+                .select('*')
+                .eq('molecule_id', molecule.id);
+
+            if (error) {
+                console.warn('Error fetching resources:', error.message);
+            } else if (data) {
+                const mappedResources: MoleculeResource[] = data.map((r: any) => ({
+                    id: r.id.toString(),
+                    moleculeId: r.molecule_id.toString(),
+                    title: r.title,
+                    type: r.type, // 'pdf' | 'link' | 'image' | 'text'
+                    url: r.url,
+                    fileName: r.file_name,
+                    date: r.created_at
+                }));
+                setResources(mappedResources);
+            }
+        };
+        fetchResources();
+    }, [molecule.id]);
+
     // Add Link State
     const [isAddingLink, setIsAddingLink] = useState(false);
     const [newLinkTitle, setNewLinkTitle] = useState('');
@@ -116,7 +141,7 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
         onSaveNote(newNote);
         setNewNoteText('');
     }, [newNoteText, molecule.id, onSaveNote]);
-    
+
     const handleStartEditing = useCallback((note: ScentNote) => {
         setEditingNote({ id: note.id, text: note.text });
     }, []);
@@ -200,13 +225,13 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
             <div className="flex flex-col space-y-4 pb-4 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center space-x-4">
-                         <button onClick={onBack} className="text-gray-400 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors p-2 rounded-full bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none">
+                        <button onClick={onBack} className="text-gray-400 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors p-2 rounded-full bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                         </button>
                         <div>
                             <div className="flex items-center space-x-2">
-                                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{molecule.name}</h2>
-                                 <button onClick={() => onOpenEditor(molecule, 'header')} className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{molecule.name}</h2>
+                                <button onClick={() => onOpenEditor(molecule, 'header')} className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L16.732 3.732z" /></svg>
                                 </button>
                             </div>
@@ -262,7 +287,7 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
                                 {notes.length > 0 ? notes.map(note => (
                                     <div key={note.id} className="text-xs border-l-2 border-gray-300 dark:border-gray-700 pl-2 py-1 group relative">
                                         {editingNote?.id === note.id ? (
-                                            <div className="flex gap-1"><input value={editingNote.text} onChange={e => setEditingNote({...editingNote, text: e.target.value})} className="bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded px-1 w-full text-gray-900 dark:text-white" autoFocus /><button onClick={handleUpdateNote} className="text-green-500">✓</button></div>
+                                            <div className="flex gap-1"><input value={editingNote.text} onChange={e => setEditingNote({ ...editingNote, text: e.target.value })} className="bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded px-1 w-full text-gray-900 dark:text-white" autoFocus /><button onClick={handleUpdateNote} className="text-green-500">✓</button></div>
                                         ) : (
                                             <><p className="text-gray-700 dark:text-gray-300">{note.text}</p><p className="text-[10px] text-gray-500 dark:text-gray-600">{new Date(note.createdAt).toLocaleDateString()}</p><div className="absolute top-0 right-0 hidden group-hover:flex bg-white dark:bg-[#1C1C1C]"><button onClick={() => handleStartEditing(note)} className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white px-1">✎</button><button onClick={() => onDeleteNote(note.id)} className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-500 px-1">×</button></div></>
                                         )}
@@ -277,7 +302,7 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
                 <div className="space-y-6 animate-fade-in">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" />
                     <div onClick={handleUploadClick} className="border-2 border-dashed border-gray-300 dark:border-gray-800 rounded-lg p-8 text-center bg-gray-50 dark:bg-[#111]/50 hover:bg-white dark:hover:bg-[#111] hover:border-gray-400 dark:hover:border-gray-600 transition-all cursor-pointer group"><svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto text-gray-400 dark:text-gray-700 group-hover:text-[#a89984] transition-colors mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><p className="text-gray-600 dark:text-gray-500 text-sm font-medium group-hover:text-gray-800 dark:group-hover:text-gray-300">Drop files to upload</p><p className="text-xs text-gray-500 dark:text-gray-600 mt-1">PDFs, Images, Docs</p></div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {isAddingLink && (
                             <div className="p-3 bg-white dark:bg-[#111] border border-[#a89984] rounded-lg flex flex-col space-y-2 animate-fade-in shadow-sm">
@@ -291,7 +316,7 @@ const MoleculeDetail: React.FC<MoleculeDetailProps> = ({ molecule, notes, olfact
                         )}
                         {resources.length > 0 ? resources.map(res => <KnowledgeResourceCard key={res.id} resource={res} onDelete={handleDeleteResource} />) : !isAddingLink && <div className="col-span-full text-center py-12 text-gray-500"><p className="text-sm">No resources found.</p><p className="text-xs mt-1">Add links or files to build your knowledge base.</p></div>}
                     </div>
-                    
+
                     <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-800"><button onClick={handleStartAddLink} className="px-4 py-2 bg-white dark:bg-[#1C1C1C] border border-gray-300 dark:border-gray-700 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 text-xs font-bold uppercase tracking-wider flex items-center transition-colors"><span className="text-lg mr-2 leading-none">+</span> Add Link</button><button onClick={handleUploadClick} className="px-4 py-2 bg-[#a89984] text-black rounded-md hover:bg-[#bfa78a] text-xs font-bold uppercase tracking-wider flex items-center shadow-lg transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> Upload</button></div>
                 </div>
             )}

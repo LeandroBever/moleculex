@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Molecule, OlfactiveFamily } from '../types';
 import { CATEGORY_COLORS } from '../constants';
+import { supabase } from '../lib/supabase';
 
 interface MoleculeListProps {
     molecules: Molecule[];
